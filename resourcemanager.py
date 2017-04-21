@@ -46,10 +46,16 @@ class ImageManager:
 
 		try:
 			path = os.environ["SUGAR_BUNDLE_PATH"]
+			if not "Ajedrez.activity" in path:
+				print "Running ceibal-chess from Terminal or some other place"
+				path = ""
 		except:
 			path = ""
 
 		self.images[imgname] = pygame.image.load(os.path.join(path, "data_bw", imgname))
+		log.debug("Image '%s': %dx%d" % (imgname, \
+					self.images[imgname].get_width(), \
+					self.images[imgname].get_height()))
 		return self.images[imgname]
 
 #ImageManager singleton

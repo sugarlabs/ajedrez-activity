@@ -286,7 +286,6 @@ class BasePiece(object):
 		moves = self._get_moves(fro, board, attack_only = attack_only, **options)
 		for move in moves:
 			move.acting_piece = self
-
 		if filter_check:
 			return [x for x in moves if not x.causes_check(board, self.owner)]
 		else:

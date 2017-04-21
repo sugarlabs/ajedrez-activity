@@ -34,6 +34,14 @@ main.py
 menu.py
 messenger.py
 piece.py
+po/ceibalchess.pot
+po/en/LC_MESSAGES/messages.mo
+po/en_US.po
+po/es/LC_MESSAGES/messages.mo
+po/es_UY.po
 resourcemanager.py
 setup.py
+sugargame/__init__.py
+sugargame/canvas.py
+sugargame/event.py
 ui.py

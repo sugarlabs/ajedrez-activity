@@ -2,7 +2,7 @@
 [Activity]
 name = Ajedrez
 service_name = org.x.ajedrezactivity
-activity_version = 1
+activity_version = 2
 host_version = 1
 bundle_id = org.x.ajedrezactivity
 icon = activity-icon

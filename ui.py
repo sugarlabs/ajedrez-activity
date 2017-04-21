@@ -16,7 +16,10 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
-import pygame, os
+import pygame
+import os
+import gettext
+from gettext import gettext as _
 from resourcemanager import image_manager
 
 class StatePanel:
@@ -60,9 +63,9 @@ class StatePanel:
 				"checkmate_black" : king_black }
 		
 		font = pygame.font.Font(None, 25)
-		self.turn_text = font.render("Current Turn:", 1, (255, 255, 255))
-		self.check_text = font.render("Check:", 1, (255, 255, 0))
-		self.mate_text = font.render("Checkmate:", 1, (255, 20, 20))
+		self.turn_text = font.render(_("Current Turn:"), 1, (255, 255, 255))
+		self.check_text = font.render(_("Check:"), 1, (255, 255, 0))
+		self.mate_text = font.render(_("Checkmate:"), 1, (255, 20, 20))
 		
 		self.loaded = True
 	

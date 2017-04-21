@@ -18,10 +18,14 @@
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #
 
+import os
 import sys
 import time
 import traceback
 import logging
+import gtk
+import gettext
+from gettext import gettext as _
 
 logging.basicConfig(
 	#level=logging.NOTSET,
@@ -32,11 +36,16 @@ log = logging.getLogger()
 
 try:
 	import pygame
+	vers = pygame.vernum
+	# Force to False for rendering like on the XO
+	alpha_blending = vers[0] >= 1 and vers[1] >= 8
+	if not alpha_blending:
+		log.warn("Pygame version does not support alpha blending. Disabling...")
 
 except Exception, ex:
 	print >>sys.stderr, \
 	"""\n\n############################################################
-	You don't have pygame installed or is not inside PYTHONPATH,
+	You either do not have pygame installed or it's not within PYTHONPATH,
 	read the trace for aditional information
 	############################################################\n\n"""
 	print >>sys.stderr, ex.message
@@ -68,13 +77,17 @@ class CeibalChess(object):
 		self.screen = None
 		self.game_code = None
 		self.dump_path = None
+		self.close_callback = None
 
-	def start(self, scr_w, scr_h, dump=False):
+	def start(self, scr_w=1200, scr_h=900, dump=False, gtk_embedded=True):
+		log.warn("LANG is %s" % os.environ["LANG"])
 		self.debug = dump
+		self.gtk_embedded = gtk_embedded
 		try:
 			if dump:
 				self._init_dump()
 			try:
+				self.done = False
 				self._run(scr_w, scr_h)
 				return 0
 			except KeyboardInterrupt:
@@ -89,6 +102,13 @@ class CeibalChess(object):
 				return -1
 		finally:
 			self._cleanup()
+	
+	def set_close_callback(self, close_callback):
+		self.close_callback = close_callback
+
+	def stop(self):
+		self.controller.close()
+		self.done = True
 
 	def _init_dump(self):
 		self.game_code = str(int(time.time()))
@@ -119,8 +139,8 @@ class CeibalChess(object):
 
 		#Messages
 		game_messages = {}
-		game_messages["checkmate"] = Message("Checkmate!", 10, 40, (255, 0, 0))
-		game_messages["check"] = Message("Check", 10, 40, (128, 0, 0))
+		game_messages["checkmate"] = Message(_("Checkmate!"), 10, 40, (255, 0, 0))
+		game_messages["check"] = Message(_("Check"), 10, 40, (128, 0, 0))
 		game_messages["none"] = Message("", 10, 40)
 
 		#XO: 1200x900
@@ -131,13 +151,18 @@ class CeibalChess(object):
 		size = width, height = scr_h - 70, scr_h - 70
 
 		#Screen config
-		self.screen = pygame.display.set_mode((scr_w, scr_h))
+		if not self.gtk_embedded:
+			self.screen = pygame.display.set_mode((scr_w, scr_h))
+		else:
+			self.screen = pygame.display.get_surface()
 		pygame.display.set_caption("Ceibal-Chess")
 
 		surface = pygame.Surface(size)
 		bg_img = image_manager.get_image("bg.png")
 		bg_img = pygame.transform.scale(bg_img, (scr_w, scr_h))
 		log.info("Starting width=%s height=%s", scr_w, scr_h)
+
+		accum_surface = pygame.Surface((scr_w, scr_h), pygame.SRCALPHA)
 
 		#Center chessboard in screen
 		screen_rect = self.screen.get_rect()
@@ -149,8 +174,8 @@ class CeibalChess(object):
 
 		board = Board(width, height)
 
-		menu_opts = ["New CPU Game", "Player vs. Player", \
-				"Credits", "Quit Ceibal-Chess"]
+		menu_opts = [_("New CPU Game"), _("Player vs. Player"), \
+				_("Credits"), _("Quit Ceibal-Chess")]
 		menu = Menu(scr_h, scr_h, menu_opts)
 		menu.visible = True
 
@@ -167,13 +192,15 @@ class CeibalChess(object):
 		last_time = time.time()
 
 		#Create UI Elements:
-		turn_display = StatePanel(scr_w - scr_w/6, scr_h/40, 120, 120)
+		turn_display = StatePanel(scr_w - scr_w/6.5, scr_h/40, 120, 120)
 		board_renderer = BoardRenderer(width, height)
 
+		clock = pygame.time.Clock()
 		#Post an ACTIVEEVENT to render the first time
+		pygame.event.set_blocked(pygame.MOUSEMOTION)
 		pygame.event.post(pygame.event.Event(pygame.ACTIVEEVENT))
 
-		while 1:
+		while not self.done:
 			fps += 1
 			new_time = time.time()
 			if new_time - last_time > 1:
@@ -181,102 +208,164 @@ class CeibalChess(object):
 				last_time = new_time
 				fps = 0
 
-			#clock.tick(30)
-			if not menu.visible:
-				self.controller.update()
+			# no more than 30 FPS
+			clock.tick(20)
+
 
 			#Event handling
-			event = pygame.event.wait()
-			#discard mousemotion event (too expensive)
-			while event.type == pygame.MOUSEMOTION:
-				event = pygame.event.wait()
+			if self.gtk_embedded:
+				while gtk.events_pending():
+					gtk.main_iteration()
 
-			if event.type == pygame.QUIT:
-				self.controller.close()
-				break
+			#event = pygame.event.wait()
+			for event in pygame.event.get():
+				#discard mousemotion event (too expensive)
+				#while event.type == pygame.MOUSEMOTION:
+				#	event = pygame.event.wait()
 
-			if event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_ESCAPE:
-					menu.toggle_visible()
-				if event.key == pygame.K_u and not menu.visible:
-					self.controller.undo_move()
-				#else:
-				#	controller.close()
-				#	sys.exit(0)
+				if event.type == pygame.QUIT:
+					self.controller.close()
+					self.done = True
+					break
 
-			if event.type == pygame.MOUSEBUTTONDOWN:
-				x, y = pygame.mouse.get_pos()
+				if event.type == pygame.KEYDOWN:
+					if event.key == pygame.K_ESCAPE:
+						menu.toggle_visible()
+					if event.key == pygame.K_u and not menu.visible:
+						self.controller.undo_move()
+					#else:
+					#	controller.close()
+					#	sys.exit(0)
 
+				if event.type == pygame.MOUSEBUTTONDOWN:
+					x, y = pygame.mouse.get_pos()
+
+					if not menu.visible:
+						clicked_cell = board.pick(x-delta_x, y-delta_y)
+						if clicked_cell:
+							self.controller.on_cell_clicked(clicked_cell)
+					else:
+						option = menu.on_click(x-delta_x, y-delta_y)
+						if option:
+							if option == menu_opts[3]:
+								self.controller.close()
+								self.done = True
+								break
+							elif option in menu_opts[0:2]:
+								game_mode = MODE_P_VS_CPU
+								if option == menu_opts[1]:
+									game_mode = MODE_P_VS_P
+								board = Board(width, height)
+								self.controller.close("Started new game")
+								self.controller = BoardController(board, game_mode, self.debug)
+								self.controller.init_board()
+								menu.visible = False
+								turn_display.set_state("move_white")
+				
+				# This dirty piece of code makes the refresh and checkmate check only happen when needed
+				# Need to fix this and how the _update function works.
+				#if (board.current_turn.name == "black") or \
+				#  ((board.current_turn.name == "white") and \
+				#   (event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEBUTTONUP)) or \
+				#   (turn_display.loaded == False):
+
+
+				self._update(board_renderer, board, surface, accum_surface, menu, sface_rect, delta_x, delta_y, bg_img, turn_display)
+
+				# Update IA if on "player vs cpu" mode and menu is not visible:
 				if not menu.visible:
-					clicked_cell = board.pick(x-delta_x, y-delta_y)
-					if clicked_cell:
-						self.controller.on_cell_clicked(clicked_cell)
-				else:
-					option = menu.on_click(x-delta_x, y-delta_y)
-					if option:
-						if option == menu_opts[3]:
-							self.controller.close()
-							break
-						elif option in menu_opts[0:2]:
-							game_mode = MODE_P_VS_CPU
-							if option == menu_opts[1]:
-								game_mode = MODE_P_VS_P
-							board = Board(width, height)
-							self.controller.close("Started new game")
-							self.controller = BoardController(board, game_mode, self.debug)
-							self.controller.init_board()
-							menu.visible = False
-							turn_display.set_state("move_white")
-			if not menu.visible:
-				print "Checking if king is checkmated:"
-				t_ini = time.time()
-				checkmated = board.king_is_checkmated(board.current_turn)
-				print "Check if checkmate for %s took %.5f secs" % \
-					(board.current_turn, time.time() - t_ini)
+					self.controller.update()
 
-				if checkmated:
-					#print "Checkmate for", board.current_turn
-					#messenger.messages["check"] = game_messages["checkmate"]
-					#self.controller.game_state = "checkmate"
-					turn_display.set_state("checkmate_" + board.current_turn.name)
-					self.controller.on_checkmate()
+		log.debug("Exiting...")
+		if not self.gtk_embedded:
+			pygame.quit()
 
-				elif board.king_is_checked(board.current_turn):
-					#messenger.messages["check"] = game_messages["check"]
-					turn_display.set_state("check_" + board.current_turn.name)
-				else:
-					#messenger.messages["check"] = game_messages["none"]
-					turn_display.set_state("move_" + board.current_turn.name)
+		if self.close_callback:
+			self.close_callback()
+		
 
-			#time visual update:
+	def _update(self, board_renderer, board, surface, accum_surface, menu, sface_rect, delta_x, delta_y, bg_img, turn_display):
+		if not menu.visible:
+			#print "Checking if king is checkmated:"
 			t_ini = time.time()
+			checkmated = board.king_is_checkmated(board.current_turn)
+			#print "Check if checkmate for %s took %.5f secs" % \
+			#(board.current_turn, time.time() - t_ini)
 
-			self._clear(self.screen)
-			self._clear(surface)
+			if checkmated:
+				#print "Checkmate for", board.current_turn
+				#messenger.messages["check"] = game_messages["checkmate"]
+				#self.controller.game_state = "checkmate"
+				turn_display.set_state("checkmate_" + board.current_turn.name)
+				self.controller.on_checkmate()
 
-			self.screen.blit(bg_img, bg_img.get_rect())
+			elif board.king_is_checked(board.current_turn):
+				#messenger.messages["check"] = game_messages["check"]
+				turn_display.set_state("check_" + board.current_turn.name)
+			else:
+				#messenger.messages["check"] = game_messages["none"]
+				turn_display.set_state("move_" + board.current_turn.name)
 
-			board_renderer.render_background(board, surface)
+		#time visual update:
+		t_ini = time.time()
 
-			if self.controller.selected_cell is not None:
-				board_renderer.render_moves_for_piece_in_cell(board, surface, self.controller.selected_cell)
+		#No need to clear the buffers if we are redrawing them from scratch
+		#self._clear(self.screen)
+		#self._clear(surface)
 
-			board_renderer.render_foreground(board, surface)
+		self.screen.blit(bg_img, bg_img.get_rect())
+		#accum_surface.blit(bg_img, bg_img.get_rect())
+		#surface.blit(bg_img, bg_img.get_rect())
 
-			menu.render(surface)
+		board_renderer.render_background(board, surface)
 
+		if self.controller.selected_cell is not None:
+			board_renderer.render_moves_for_piece_in_cell(board, surface, self.controller.selected_cell)
+
+		board_renderer.render_foreground(board, surface)
+		
+		menu.render(surface)
+
+		global alpha_blending
+
+		if not menu.visible:
+			if alpha_blending:
+				turn_display.render(accum_surface)
+
+		# Frame alpha blending
+		if alpha_blending:
+			debug_t = pygame.time.get_ticks()
+			fade_time = 350.0 #Time in ms the animation lasts
+			blit_accum_t = 0
+
+			last_blit = pygame.time.get_ticks()
+
+			while blit_accum_t < fade_time:
+				curr_t = pygame.time.get_ticks()
+				delta_t = curr_t - last_blit
+				blit_accum_t += delta_t
+
+				surface.set_alpha(int(blit_accum_t / float(fade_time) * 255))
+				#self.screen.blit(surface, sface_rect.move(delta_x, delta_y))
+				accum_surface.blit(surface, sface_rect.move(delta_x, delta_y))
+
+				#self.screen.blit(accum_surface, accum_surface.get_rect())
+				self.screen.blit(accum_surface, sface_rect)
+				pygame.display.flip()
+				last_blit = curr_t
+
+
+			#print "fade in lasted", pygame.time.get_ticks() - debug_t, "ms"
+		else:
 			self.screen.blit(surface, sface_rect.move(delta_x, delta_y))
 
-			if not menu.visible:
-				turn_display.render(self.screen)
+		if not menu.visible and not alpha_blending:
+			turn_display.render(self.screen)
+		
+		pygame.display.flip()
 
-			messenger.render_messages(self.screen)
-
-			self._update()
-
-			log.debug("Visual refresh took %.5f secs", (time.time() - t_ini))
-
-	def _update(self, ):
+		messenger.render_messages(self.screen)
+                #log.debug("Visual WHITE refresh took %.5f secs", (time.time() - t_ini))
 		pygame.display.flip()
 
 	def _clear(self, surface):
@@ -287,5 +376,14 @@ class CeibalChess(object):
 			self.controller.close()
 
 if __name__ == "__main__":
-	rc = CeibalChess().start(933,  700, dump=True)
+	# i18n
+	gettext.bindtextdomain("messages", "./po/")
+	gettext.textdomain("messages")
+
+	# Check if we are running on a XO or not.
+	if os.access("/sys/power/olpc-pm", os.F_OK):
+		resolution = (1200, 900)
+	else:
+		resolution = (933, 700)
+	rc = CeibalChess().start(dump=True, gtk_embedded=False, *resolution)
 	sys.exit(rc)

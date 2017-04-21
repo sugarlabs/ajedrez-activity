@@ -1,0 +1,55 @@
+# Spanish translations for Ceibal-Chess package
+# Traducciones al español para el paquete Ceibal-Chess.
+# Copyright (C) 2010 THE CEIBAL-CHESS'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the Ceibal-Chess 
+# package.
+# Alejandro Segovia <asegovi@gmail.com>, 2010.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2010-12-08 16:46-0200\n"
+"PO-Revision-Date: 2010-12-08 16:50-0200\n"
+"Last-Translator: Alejandro Segovia <asegovi@gmail.com>\n"
+"Language-Team: Spanish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-1\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: main.py:141
+msgid "Checkmate!"
+msgstr "Mate!"
+
+#: main.py:142
+msgid "Check"
+msgstr "Jaque"
+
+#: main.py:176
+msgid "New CPU Game"
+msgstr "Nuevo Juego UCP"
+
+#: main.py:176
+msgid "Player vs. Player"
+msgstr "Jugador vs. Jugador"
+
+#: main.py:177
+msgid "Credits"
+msgstr "Creditos"
+
+#: main.py:177
+msgid "Quit Ceibal-Chess"
+msgstr "Salir de Ceibal-Chess"
+
+#: ui.py:63
+msgid "Current Turn:"
+msgstr "Turno Actual:"
+
+#: ui.py:64
+msgid "Check:"
+msgstr "Jaque:"
+
+#: ui.py:65
+msgid "Checkmate:"
+msgstr "Mate:"
