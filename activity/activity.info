@@ -1,0 +1,10 @@
+
+[Activity]
+name = Ajedrez
+service_name = org.x.ajedrezactivity
+activity_version = 1
+host_version = 1
+bundle_id = org.x.ajedrezactivity
+icon = activity-icon
+class = chessactivity.ChessActivity
+show_launcher = yes
