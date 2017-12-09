@@ -8,3 +8,4 @@ bundle_id = org.x.ajedrezactivity
 icon = activity-icon
 class = chessactivity.ChessActivity
 show_launcher = yes
+repository = https://github.com/sugarlabs/ajedrez-activity.git
