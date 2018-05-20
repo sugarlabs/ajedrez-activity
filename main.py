@@ -23,7 +23,9 @@ import sys
 import time
 import traceback
 import logging
-import gtk
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
 import gettext
 from gettext import gettext as _
 
@@ -214,8 +216,8 @@ class CeibalChess(object):
 
 			#Event handling
 			if self.gtk_embedded:
-				while gtk.events_pending():
-					gtk.main_iteration()
+				while Gtk.events_pending():
+					Gtk.main_iteration()
 
 			#event = pygame.event.wait()
 			for event in pygame.event.get():
