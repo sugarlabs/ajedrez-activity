@@ -2,9 +2,11 @@
 [Activity]
 name = Ajedrez
 service_name = org.x.ajedrezactivity
-activity_version = 2
+activity_version = 3
 host_version = 1
 bundle_id = org.x.ajedrezactivity
 icon = activity-icon
-class = chessactivity.ChessActivity
+exec = chessactivity.ChessActivity
 show_launcher = yes
+license = GPLv2+
+repository = https://github.com/sugarlabs/ajedrez-activity.git
