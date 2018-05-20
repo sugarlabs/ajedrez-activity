@@ -1,12 +1,14 @@
 import sys
 import os
-from sugargame.canvas import PygameCanvas
-import gobject
-
+import sugargame
+import sugargame.canvas
+import gi
+from gi.repository import GObject
+import pygame
 import gettext
 from gettext import gettext as _
 
-from sugar.activity import activity
+from sugar3.activity import activity
 from main import CeibalChess, log
 
 class ChessActivity(activity.Activity):
@@ -29,18 +31,13 @@ class ChessActivity(activity.Activity):
 		gettext.textdomain("messages")
 
 		activity.Activity.__init__(self, handle)
-		self.canvas = PygameCanvas(self)
-		self.set_canvas(self.canvas)
-		self.chess = CeibalChess()
-		self.chess.set_close_callback(self.close)
-		self.show()
-		gobject.idle_add(self.start_cb, None)
-		#rc = CeibalChess().start(1200,  900)
-		#sys.exit(rc)
-	
-	def start_cb(self, param):
+		self.game= CeibalChess(self)
+		self.game.canvas = sugargame.canvas.PygameCanvas(
+			self,
+			main=self.game.start,
+			modules=[pygame.display, pygame.font])
 		log.info("Starting pygame widget...")
-		self.canvas.run_pygame(self.chess.start)
+		self.set_canvas(self.game.canvas)
 
 	def read_file(self, filepath):
 		pass
@@ -50,6 +47,6 @@ class ChessActivity(activity.Activity):
 
 	def can_close(self):
 		log.info("Activity requested to stop...")
-		self.chess.stop()
+		self.game.stop()
 		return True
 
